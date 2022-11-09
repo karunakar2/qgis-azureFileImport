@@ -16,7 +16,7 @@ class kQGisAzureBulkImport:
         #from qgis.core import QgsProject
         #bPath = QgsProject.instance().homePath()
         if os.name == 'nt':
-            bPath = os.path.expanduser('~\Documents')
+            bPath = os.path.expanduser(r'~\Documents')
         else:
             bPath = os.path.expanduser('~/Documents')
         bPath = os.path.join(bPath, "kQGisAzureBulkImport.log")
@@ -84,7 +84,7 @@ class kQGisAzureBulkImport:
         return None
 
     def _prepVirtLayer(self,myQuery,thisFile):
-        logging.info(myQuery)
+        self.logger.info(myQuery)
         if len(str(myQuery)) > 0:
             myLayer = str(thisFile.split('.')[0])
             myQuery = 'select '+myQuery
