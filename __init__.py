@@ -9,7 +9,8 @@
 # (at your option) any later version.
 #---------------------------------------------------------------------
 
-from PyQt5.QtWidgets import QAction, QMessageBox
+from PyQt5.QtWidgets import QAction
+from kQGisAzureBulkImport import kQGisAzureBulkImport
 
 def classFactory(iface):
     return MinimalPlugin(iface)
@@ -20,7 +21,7 @@ class MinimalPlugin:
         self.iface = iface
 
     def initGui(self):
-        self.action = QAction('Go!', self.iface.mainWindow())
+        self.action = QAction('kAzureBulk!', self.iface.mainWindow())
         self.action.triggered.connect(self.run)
         self.iface.addToolBarIcon(self.action)
 
@@ -29,4 +30,6 @@ class MinimalPlugin:
         del self.action
 
     def run(self):
-        QMessageBox.information(None, 'Minimal plugin', 'Do something useful here')
+        #QMessageBox.information(None, 'Minimal plugin', 'Do something useful here')
+        myCore = kQGisAzureBulkImport.kQGisAzureBulkImport()
+        myCore.run()
