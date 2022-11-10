@@ -12,6 +12,7 @@
 from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtGui import QIcon
 from kQGisAzureBulkImport import kQGisAzureBulkImport
+import os
 
 def classFactory(iface):
     return MinimalPlugin(iface)
@@ -22,7 +23,7 @@ class MinimalPlugin:
         self.iface = iface
 
     def initGui(self):
-        self.action = QAction(QIcon(":/plugins/kQGisAzureBulkImport/img/kIcon.png"),'kQGABI', self.iface.mainWindow())
+        self.action = QAction(QIcon(os.path.dirname(__file__) + "/img/kIcon.png"),'kQGABI', self.iface.mainWindow())
         self.action.triggered.connect(self.run)
         self.iface.addToolBarIcon(self.action)
 

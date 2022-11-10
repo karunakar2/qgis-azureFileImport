@@ -25,6 +25,19 @@ class kQGisAzureBulkImport:
                     format='%(asctime)s %(levelname)s %(name)s %(message)s')
         return logging.getLogger(__name__)
 
+    def _progressDialog(self,progress):
+        from qgis.PyQt.QtWidgets import QProgressDialog, QProgressBar
+        dialog = QProgressDialog()
+        dialog.setWindowTitle("kQGisAzureBulkImport")
+        dialog.setLabelText("Downloading")
+        bar = QProgressBar(dialog)
+        bar.setTextVisible(True)
+        bar.setValue(progress)
+        dialog.setBar(bar)
+        dialog.setMinimumWidth(300)
+        dialog.show()
+        return dialog, bar
+
         
     def _notifyThem(self, myMessage:str):
         try:
@@ -81,7 +94,12 @@ class kQGisAzureBulkImport:
             self._notifyThem(str(thisFile)+" failed to load!")
         else:
             QgsProject.instance().addMapLayer(vlayer)
-        return None
+
+        myAttributes = vlayer.fields().names()
+        if len(myAttributes) > 0:
+            return myAttributes
+        else:
+            return None
 
     def _prepVirtLayer(self,myQuery,thisFile):
         self.logger.info(myQuery)
@@ -111,8 +129,9 @@ class kQGisAzureBulkImport:
             selectImportFile = (dialog.getOpenFileName(None,'ConfigFile',"",))[0]
         except Exception as er:
             self.logger.error(er)
-            self._notifyThem('you should have got a copy of json file point to file list json file on cloud or make one yourself')
-            selectImportFile = None #intentional, next statements break
+            self._notifyThem('you should have got a copy of fetch (json) file or make one yourself')
+            selectImportFile = None #intentional, next statement will break
+            return None
 
         with open(selectImportFile,'r') as f:
             self._configFile = json.load(f)
@@ -139,8 +158,17 @@ class kQGisAzureBulkImport:
         with open('stream.temp','rb') as f:
             workFile=json.load(f)
 
+        barNumerator = 0
+        progDialog, progBar = self._progressDialog(barNumerator)
+        progBar.setValue(barNumerator)
+        progBar.setMaximum(100)
+        barDenominator = len(workFile['fileList'].keys())
+
+        knownGeometryColumnNames = ['Geomstr','geomstr','geomStr','Geom','geom','Geometry','geometry']
         for thisContainer in workFile['fileList'].keys():
             if thisContainer != 'containerName':
+                barNumerator += 1
+                
                 #self._notifyThem('--importing from'+str(thisContainer)+'--')
                 for localName,cloudPath in workFile['fileList'][thisContainer].items():
                     #self._notifyThem(localName)
@@ -149,47 +177,30 @@ class kQGisAzureBulkImport:
                     except Exception as er:
                         self._notifyThem('Failed to fetch '+str(cloudPath))
                         self.logger.error(er)
-                    gCol = None
+                    
                     myAttributes = None
                     try:
-                        if localName.split('.')[1] == 'parquet':
-                            import pandas as pd
-                            df = pd.read_parquet(localName)
-                            myAttributes = df.columns.copy()
-                            if 'Geomstr' in myAttributes:
-                                gCol = 'Geomstr'
-                            if 'Geom' in myAttributes:
-                                gCol = 'Geom'
-                            if 'Geometry' in myAttributes:
-                                gCol = 'Geometry'
-                            if gCol is not None:
-                                import geopandas as gpd
-                                gdf = gpd.GeoDataFrame(df,geometry=gpd.GeoSeries.from_wkt(df[gCol]))
-                                gdf.to_parquet('g-'+localName)
-                                localName = 'g-'+localName #wont get updated if above fails
-                                gdf = None
-                                
-                    except Exception as er:
-                        self.logger.error('Cant prepare geoparquet files for '+str(localName))
-                        self.logger.error(er)
-
-                    try:
-                        self._load2Qgis(localName)
+                        myAttributes = self._load2Qgis(localName)
                     except Exception as er:
                         self.logger.error(er)
                         self._notifyThem('Cant load file to qgis: '+str(localName))
                         pass
 
-                    if 'g-' not in localName:
-                        try:
-                            if gCol is not None:
-                                #myAttributes.remove(gCol)
-                                queryVars = ','.join(myAttributes)
-                                queryVars += ',ST_GeomFromText('+str(gCol)+')'
-                                self._prepVirtLayer(queryVars,localName)
-                        except Exception as er:
-                            self.logger.error(er)
+                    try:
+                        selectGeomField = list(set(myAttributes)&set(knownGeometryColumnNames))
+                        gCol = None
+                        if len(selectGeomField) > 0:
+                            gCol = selectGeomField.pop() #picking the first
+                        if gCol is not None:
+                            #myAttributes.remove(gCol)
+                            queryVars = ','.join(myAttributes)
+                            queryVars += ',ST_GeomFromText('+str(gCol)+')'
+                            self._prepVirtLayer(queryVars,localName)
+                    except Exception as er:
+                        self.logger.error(er)
                     gCol = None
+
+                    progBar.setValue(int(float(barNumerator)/float(barDenominator)*100))
         return None
 
         
