@@ -1,27 +1,31 @@
-# QGIS Minimalist Plugin Skeleton
+This plugin helps anyone trying to connect to Azure containers to fetch the files.
+While the ogr has standard method to grab the files one by one, described in below link
+https://gis.stackexchange.com/questions/414343/connecting-qgis-with-azure-adls-gen2-storage
+This plugin is targeted at importing a bulk of files with a configuration file.
 
-In various QGIS plugin tutorials you are told to use _Plugin Builder_ tool to create a skeleton for your plugin.
-It is surely helpful as it helps you kickstart your plugin with stuff like UI designer file, auto tests, docs, i18n, scripts and so on.
+The current implementation needs two files, which are json built.
+1. A local configFile (which points to the another on the cloud) formatted as below
+{
+    "container":",container",
+    "configFile":"mainDir/subDir/fullConfig.json",
+	    "AZURE_STORAGE_CONNECTION_STRING":""
+}
+the file name can be anything with json extension (preferred)
 
-This QGIS plugin is the complete opposite of a plugin built with _Plugin Builder_: it is a plugin skeleton cut down
-to the bare minimum that still results in a valid QGIS plugin. It consists of two files only: a text file with metadata and a Python file with a bit of code.
-
-## Why?
-
-For educational purposes, it is useful to understand how a very basic plugin could look like.
-
-For practical reasons, it is sometimes useful to create a single purpose plugin with the least amount of extra bells and whistles,
-so the code that actually does something is not hidden among generated boilerplate code.
-
-## How to use it?
-
-1. Create a new python plugin directory
-  * e.g. Linux ```~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/minimal```
-  * e.g. Windows ```C:\Users\USER\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\minimal```
-2. Copy ```metadata.txt``` and ```__init__.py``` to that directory
-3. Start QGIS and enable the plugin (menu Plugins > Manager and Install Plugins...)
-
-Now you should see a "Go!" button in your "Plugins" toolbar (make sure it is enabled in menu Settings > Toolbars > Plugins).
-
-The next step is to change the metadata (e.g. plugin title and description) in ```metadata.txt``` and
-start adding your own code to ```__init__.py```. Have fun!
+2. The second json file sitting on the cloud has actual paths and how the local files should be named
+{
+    "author":"karunakar",
+    "date":"8/11/22",
+    "template":"github.com/karunakar2",
+    "fileList":{
+        "containerName":{
+            "localFileName":"cloudFilePath"
+            }
+        }
+    }
+    please dont use abfss paths, but use the relative paths here.
+    This file is named "mainDir/subDir/fullConfig.json" on cloud.
+    
+    Enjoy, its still a dev release but working on functionality.
+    
+    
