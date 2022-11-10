@@ -3,6 +3,11 @@ While the ogr has standard method to grab the files one by one, described in bel
 https://gis.stackexchange.com/questions/414343/connecting-qgis-with-azure-adls-gen2-storage
 This plugin is targeted at importing a bulk of files with a configuration file.
 
+There is an intermediatory step to install requisite azure module.
+Please open OSGeo4W-shell on your windows machine (assuming you know where it is on linux)
+run "python -m pip install azure-storage-file-datalake"
+to get the background requisite microsoft module.
+
 The current implementation needs two files, which are json built.
 1. A local configFile (which points to the another on the cloud) formatted as below
 {
