@@ -63,13 +63,11 @@ class kQGisAzureBulkImport:
     def _getAdlsFile(self,azContainer,azFilePath,fName):
         try:
             from azure.storage.filedatalake import DataLakeFileClient
-        except ModuleNotFoundError:
-            self._thirdPartyModule('azure_storage_file_datalake-12.0.0-py2.py3-none-any.whl')
         except ImportError:
             self._thirdPartyModule('azure_storage_file_datalake-12.0.0-py2.py3-none-any.whl')
         except:
             pass
-        
+
         try:
             from azure.storage.filedatalake import DataLakeFileClient
         except Exception as er:
@@ -77,11 +75,11 @@ class kQGisAzureBulkImport:
             self._notifyThem("Please open 'OSGeo4W shell' (via windows menu) command prompt and")
             self._notifyThem("Execute 'python -m pip install azure-storage-file-datalake'")
             self._notifyThem("Wait for installation and grab a fresh start of QGIS for this plugin to work")
-            
+
         file = DataLakeFileClient.from_connection_string(self.azConStr,
                                                          file_system_name=azContainer,
                                                          file_path=azFilePath)
-        with open("./"+fName, 'wb') as my_file:
+        with open(f"./{fName}", 'wb') as my_file:
             download = file.download_file()
             file = None
             download.readinto(my_file)
@@ -91,24 +89,21 @@ class kQGisAzureBulkImport:
         from qgis.core import QgsVectorLayer, QgsProject
         vlayer = QgsVectorLayer(thisFile,thisFile.split('.')[0],"ogr")
         if not vlayer.isValid():
-            self._notifyThem(str(thisFile)+" failed to load!")
+            self._notifyThem(f"{str(thisFile)} failed to load!")
         else:
             QgsProject.instance().addMapLayer(vlayer)
 
         myAttributes = vlayer.fields().names()
-        if len(myAttributes) > 0:
-            return myAttributes
-        else:
-            return None
+        return myAttributes if len(myAttributes) > 0 else None
 
     def _prepVirtLayer(self,myQuery,thisFile):
         self.logger.info(myQuery)
-        if len(str(myQuery)) > 0:
+        if str(myQuery) != "":
             myLayer = str(thisFile.split('.')[0])
-            myQuery = 'select '+myQuery
-            myQuery += ' from '+myLayer
+            myQuery = f'select {myQuery}'
+            myQuery += f' from {myLayer}'
             from qgis.core import QgsVectorLayer, QgsProject
-            vlayer = QgsVectorLayer( "?query="+myQuery, myLayer, "virtual")
+            vlayer = QgsVectorLayer(f"?query={myQuery}", myLayer, "virtual")
             QgsProject.instance().addMapLayer(vlayer)
         else:
             raise Exception
@@ -120,7 +115,7 @@ class kQGisAzureBulkImport:
             #Project directory, files come down here
             dirName = QFileDialog.getExistingDirectory(None,'Project Directory',"",)
             os.chdir(dirName)
-            
+
             #The json file pointing to the file list config file
             #you should have got a copy or make one yourself
             dialog = QFileDialog()
@@ -135,21 +130,21 @@ class kQGisAzureBulkImport:
 
         with open(selectImportFile,'r') as f:
             self._configFile = json.load(f)
-            
+
         if self.azConStr is None:
             try:
                 self.azConStr = self._configFile[self.envVar]
             except Exception as er:
                 logging.error(er)
-                
+
         if self.azConStr is None:
             from qgis.PyQt.QtWidgets import QInputDialog, QLineEdit
             thisText, ok = QInputDialog.getText(None, "Container customisation", "AZURE_STORAGE_CONNECTION_STRING:", QLineEdit.Normal, '')
             if ok and thisText:
                 self.azConStr = thisText
-            
+
         if self.azConStr is None: #still none?
-            self._notifyThem('Please set '+str(envVar)+' in environment settings')
+            self._notifyThem(f'Please set {str(envVar)} in environment settings')
             return None #force fail the imported method
 
         #touch base with azure for the list of files
@@ -168,33 +163,32 @@ class kQGisAzureBulkImport:
         for thisContainer in workFile['fileList'].keys():
             if thisContainer != 'containerName':
                 barNumerator += 1
-                
+
                 #self._notifyThem('--importing from'+str(thisContainer)+'--')
                 for localName,cloudPath in workFile['fileList'][thisContainer].items():
                     #self._notifyThem(localName)
                     try:
                         self._getAdlsFile(thisContainer,cloudPath,localName)
                     except Exception as er:
-                        self._notifyThem('Failed to fetch '+str(cloudPath))
+                        self._notifyThem(f'Failed to fetch {str(cloudPath)}')
                         self.logger.error(er)
-                    
+
                     myAttributes = None
                     try:
                         myAttributes = self._load2Qgis(localName)
                     except Exception as er:
                         self.logger.error(er)
-                        self._notifyThem('Cant load file to qgis: '+str(localName))
-                        pass
-
+                        self._notifyThem(f'Cant load file to qgis: {str(localName)}')
                     try:
-                        selectGeomField = list(set(myAttributes)&set(knownGeometryColumnNames))
                         gCol = None
-                        if len(selectGeomField) > 0:
+                        if selectGeomField := list(
+                            set(myAttributes) & set(knownGeometryColumnNames)
+                        ):
                             gCol = selectGeomField.pop() #picking the first
                         if gCol is not None:
                             #myAttributes.remove(gCol)
                             queryVars = ','.join(myAttributes)
-                            queryVars += ',ST_GeomFromText('+str(gCol)+')'
+                            queryVars += f',ST_GeomFromText({str(gCol)})'
                             self._prepVirtLayer(queryVars,localName)
                     except Exception as er:
                         self.logger.error(er)

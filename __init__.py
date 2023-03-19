@@ -23,7 +23,11 @@ class MinimalPlugin:
         self.iface = iface
 
     def initGui(self):
-        self.action = QAction(QIcon(os.path.dirname(__file__) + "/img/kIcon.png"),'kQGABI', self.iface.mainWindow())
+        self.action = QAction(
+            QIcon(f"{os.path.dirname(__file__)}/img/kIcon.png"),
+            'kQGABI',
+            self.iface.mainWindow(),
+        )
         self.action.triggered.connect(self.run)
         self.iface.addToolBarIcon(self.action)
 
